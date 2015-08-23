@@ -1,0 +1,27 @@
+{
+    "name": "jasny/robo-extensions",
+    "type": "library",
+    "description": "Custom tasks for RoboTask",
+    "keywords": ["build", "task"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Arnold Daniels",
+            "email": "arnold@jasny.net",
+            "homepage": "http://www.jasny.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/jasny/robo-extensions/issues",
+        "source": "https://github.com/jasny/robo-extensions"
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "codegyre/robo": "*",
+    },
+    "autoload": {
+        "psr-0": {
+            "Jasny\\Robo": "src/"
+        }
+    }
+}
