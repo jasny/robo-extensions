@@ -28,6 +28,9 @@ class BumpVersionTask extends \Robo\Task\BaseTask
     protected $filename;
     protected $inc;
     protected $to;
+    protected $useGit;
+
+    protected $tags;
 
     /**
      * Class constructor
@@ -61,8 +64,15 @@ class BumpVersionTask extends \Robo\Task\BaseTask
             }
             $version = $matches[1];
         } else {
-            $inc = $this->inc ?: 'patch';
             $version = $this->bumpSemVer($info->version);
+            
+            if ($this->useGit && $this->versionExists($version)) {
+                if ($inc !== 'patch') return Result::error($this, "Version $version already exists as Git tag");
+                
+                do {
+                    $version = $this->bumpSemVer($version);
+                } while($this->versionExists($version));
+            }
         }
         
         $newText = preg_replace('/"version"\s*:\s*"' . preg_quote($version, '/') . '"/', $text);
@@ -101,6 +111,7 @@ class BumpVersionTask extends \Robo\Task\BaseTask
     {
         if (!preg_match('/^v?(\d+\.\d+\.\d+)(?:-.+)?$/', $version, $matches)) return null;
         
+        $inc = $this->inc ?: 'patch';
         $parts = explode('.', $matches[1]);
         
         switch ($inc) {
@@ -119,6 +130,28 @@ class BumpVersionTask extends \Robo\Task\BaseTask
         }
         
         return join('.', $parts);
-    }    
+    }
+    
+    /**
+     * Check if version exists as git tag
+     *
+     * @param string $version
+     * @return boolean
+     */
+    protected function versionExists($version)
+    {
+        if (!isset($this->tags)) {
+            exec('git tag', $tags, $ret);
+            if (!$ret) return false;
+            
+            $this->tags = $tags;
+        }
+        
+        foreach ($this->tags as $tag) {
+            if (ltrim($tag, 'v') === $version) return true;
+        }
+        
+        return false;
+    }
 }
 
