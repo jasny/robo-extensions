@@ -15,5 +15,14 @@ trait loadTasks
     {
         return new LessTask($input);
     }
+    
+    /**
+     * @param $filename
+     * @return BumpVersionTask
+     */
+    protected function taskBumpVersion($filename)
+    {
+        return new BumpVersionTask($filename);
+    }
 }
 
