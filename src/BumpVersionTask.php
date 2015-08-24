@@ -19,7 +19,6 @@ use \Robo\Task\BaseTask;
  * ```
  *
  * @method inc(string) increment 'major', 'minor' or 'patch'
- * @method to(string) version to set
  */
 class BumpVersionTask extends \Robo\Task\BaseTask
 {
@@ -54,7 +53,7 @@ class BumpVersionTask extends \Robo\Task\BaseTask
         $text = file_get_contents($this->filename);
         $info = json_decode($text);
 
-        if (!file_exists($info->version)) {
+        if (!isset($info->version)) {
             return Result::error($this, "{$this->filename} does not contain a version property");
         }
 
@@ -63,19 +62,25 @@ class BumpVersionTask extends \Robo\Task\BaseTask
                 return Result::error($this, "Invalid version $version");
             }
             $version = $matches[1];
+        } elseif ($this->useGit) {
+            $version = $info->version;
+            
+            while ($this->versionExists($version)) {
+                $version = $this->bumpSemVer($version);
+
+                if ($this->inc && $this->inc !== 'patch' && $this->versionExists($version)) {
+                    return Result::error($this, "Version $version already exists as Git tag");
+                }
+            }
         } else {
             $version = $this->bumpSemVer($info->version);
-            
-            if ($this->useGit && $this->versionExists($version)) {
-                if ($inc !== 'patch') return Result::error($this, "Version $version already exists as Git tag");
-                
-                do {
-                    $version = $this->bumpSemVer($version);
-                } while($this->versionExists($version));
-            }
         }
         
-        $newText = preg_replace('/"version"\s*:\s*"' . preg_quote($version, '/') . '"/', $text);
+        $pattern = '/"version"\s*:\s*"' . preg_quote($info->version, '/') . '"/';
+        $replacement = '"version": "' . $version . '"';
+        $newText = preg_replace($pattern, $replacement, $text, 1, $count);
+        
+        if (!$count) return Result::error($this, "Failed to update version in {$this->filename}.");
         
         $res = file_put_contents($this->filename, $newText);
         if ($res === false) {
@@ -83,22 +88,36 @@ class BumpVersionTask extends \Robo\Task\BaseTask
         }
         
         $this->printTaskSuccess("<info>{$this->filename}</info> updated. Bumped to $version");
-        return Result::success($this, '', ['replaced' => $count]);
+        return Result::success($this, '', ['version' => $version]);
     }
     
     /**
      * Set to
      *
      * @param string $version
+     * @return $this;
      */
     public function to($version)
     {
         if (in_array($version, ['major', 'minor', 'patch'])) {
             $this->inc = $version;
-            return;
+            return $this;
         }
         
         $this->to = $version;
+        return $this;
+    }
+
+    /**
+     * Check git tags
+     *
+     * @param boolean $enabled
+     * @return $this;
+     */
+    public function useGit($enabled = true)
+    {
+        $this->useGit = $enabled;
+        return $this;
     }
     
     /**
@@ -142,7 +161,7 @@ class BumpVersionTask extends \Robo\Task\BaseTask
     {
         if (!isset($this->tags)) {
             exec('git tag', $tags, $ret);
-            if (!$ret) return false;
+            if ($ret) return false;
             
             $this->tags = $tags;
         }
@@ -154,4 +173,3 @@ class BumpVersionTask extends \Robo\Task\BaseTask
         return false;
     }
 }
-

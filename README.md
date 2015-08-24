@@ -32,6 +32,8 @@ A version of `Robo\Task\Assets\Less` that supports passing options and using `ur
 
 Bump the version in a json file.
 
+Optionally the git tags are referenced to determine the new version.
+
 ```php
   $this->taskBumpVersion('composer.json')
     ->inc('minor')
@@ -44,6 +46,12 @@ Bump the version in a json file.
   // `to` also works for 'major', 'minor' and 'patch'
   $this->taskBumpVersion('composer.json')
     ->to('minor')
+    ->run();
+
+  // Check the git tags
+  $this->taskBumpVersion('composer.json')
+    ->inc('patch')
+    ->useGit()
     ->run();
 ```
 
